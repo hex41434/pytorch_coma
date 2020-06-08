@@ -37,7 +37,7 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, checkpoint_dir):
     checkpoint['val_loss'] = val_loss
     torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_'+ str(epoch)+'.pt'))
 
-
+# main 
 def main(args):
     if not os.path.exists(args.conf):
         print('Config not found' + args.conf)
