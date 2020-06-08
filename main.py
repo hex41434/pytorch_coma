@@ -12,7 +12,6 @@ from data import ComaDataset
 from model import Coma
 from transform import Normalize
 
-# add comments!
 def scipy_to_torch_sparse(scp_matrix):
     values = scp_matrix.data
     indices = np.vstack((scp_matrix.row, scp_matrix.col))
@@ -37,7 +36,6 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, checkpoint_dir):
     checkpoint['val_loss'] = val_loss
     torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_'+ str(epoch)+'.pt'))
 
-# main 
 def main(args):
     if not os.path.exists(args.conf):
         print('Config not found' + args.conf)
