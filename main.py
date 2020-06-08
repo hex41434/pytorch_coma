@@ -12,7 +12,7 @@ from data import ComaDataset
 from model import Coma
 from transform import Normalize
 
-
+# add comments!
 def scipy_to_torch_sparse(scp_matrix):
     values = scp_matrix.data
     indices = np.vstack((scp_matrix.row, scp_matrix.col))
