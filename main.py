@@ -5,7 +5,8 @@ import numpy as np
 import torch.nn.functional as F
 from torch_geometric.data import DataLoader
 
-from psbody.mesh import Mesh, MeshViewers
+from psbody.mesh import Mesh
+
 import mesh_operations
 from config_parser import read_config
 from data import ComaDataset
@@ -45,13 +46,16 @@ def main(args):
     print('Initializing parameters')
     template_file_path = config['template_fname']
     template_mesh = Mesh(filename=template_file_path)
-
+        
     if args.checkpoint_dir:
         checkpoint_dir = args.checkpoint_dir
+        print(os.path.exists(checkpoint_dir))
+
     else:
         checkpoint_dir = config['checkpoint_dir']
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
+        print(os.path.exists(checkpoint_dir))
+    # if not os.path.exists(checkpoint_dir):
+    #     os.makedirs(checkpoint_dir)
 
     visualize = config['visualize']
     output_dir = config['visual_output_dir']
@@ -59,8 +63,8 @@ def main(args):
         print('No visual output directory is provided. Checkpoint directory will be used to store the visual results')
         output_dir = checkpoint_dir
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # if not os.path.exists(output_dir):
+    #     os.makedirs(output_dir)
 
     eval_flag = config['eval']
     lr = config['learning_rate']
@@ -72,7 +76,8 @@ def main(args):
     batch_size = config['batch_size']
     val_losses, accs, durations = [], [], []
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'
 
     print('Generating transforms')
     M, A, D, U = mesh_operations.generate_transform_matrices(template_mesh, config['downsampling_factors'])
@@ -142,8 +147,8 @@ def main(args):
         if opt=='sgd':
             adjust_learning_rate(optimizer, lr_decay)
 
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    # if torch.cuda.is_available():
+    #     torch.cuda.synchronize()
 
 
 def train(coma, train_loader, len_dataset, optimizer, device):

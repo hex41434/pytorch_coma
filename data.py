@@ -6,6 +6,7 @@ from torch_geometric.data import InMemoryDataset, Data
 from tqdm import tqdm
 
 from psbody.mesh import Mesh
+
 from utils import get_vert_connectivity
 from transform import Normalize
 
