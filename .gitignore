@@ -1,2 +1,5 @@
 *.pyc
 *.npy
+/MyLib_
+/MyLib
+/_MyLib_
