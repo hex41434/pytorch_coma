@@ -1,17 +1,18 @@
 import argparse
 import os
-import torch
-import numpy as np
-import torch.nn.functional as F
-from torch_geometric.data import DataLoader
 
-from psbody.mesh import Mesh
+import numpy as np
 
 import mesh_operations
+import torch
+import torch.nn.functional as F
 from config_parser import read_config
 from data import ComaDataset
 from model import Coma
+from psbody.mesh import Mesh, MeshViewer
+from torch_geometric.data import DataLoader
 from transform import Normalize
+
 
 def scipy_to_torch_sparse(scp_matrix):
     values = scp_matrix.data
@@ -46,6 +47,7 @@ def main(args):
     print('Initializing parameters')
     template_file_path = config['template_fname']
     template_mesh = Mesh(filename=template_file_path)
+    print(template_file_path)
         
     if args.checkpoint_dir:
         checkpoint_dir = args.checkpoint_dir
@@ -87,7 +89,7 @@ def main(args):
     A_t = [scipy_to_torch_sparse(a).to(device) for a in A]
     num_nodes = [len(M[i].v) for i in range(len(M))]
 
-    print('Loading Dataset')
+    print('\n\n*** Loading Dataset ***\n\n')
     if args.data_dir:
         data_dir = args.data_dir
     else:
@@ -168,7 +170,7 @@ def train(coma, train_loader, len_dataset, optimizer, device):
 def evaluate(coma, output_dir, test_loader, dataset, template_mesh, device, visualize=False):
     coma.eval()
     total_loss = 0
-    meshviewer = MeshViewers(shape=(1, 2))
+    meshviewer = MeshViewer(shape=(1, 2))
     for i, data in enumerate(test_loader):
         data = data.to(device)
         with torch.no_grad():

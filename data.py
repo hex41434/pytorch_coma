@@ -19,7 +19,10 @@ class ComaDataset(InMemoryDataset):
         self.transform = transform
         self.pre_tranform = pre_transform
         # Downloaded data is present in following format root_dir/*/*/*.py
+        print(glob.glob(self.root_dir))
         self.data_file = glob.glob(self.root_dir + '/*/*/*.ply')
+        print(self.data_file)
+        
         super(ComaDataset, self).__init__(root_dir, transform, pre_transform)
         if dtype == 'train':
             data_path = self.processed_paths[0]
@@ -30,6 +33,7 @@ class ComaDataset(InMemoryDataset):
         else:
             raise Exception("train, val and test are supported data types")
 
+        print(self.data_file)
         norm_path = self.processed_paths[3]
         norm_dict = torch.load(norm_path)
         self.mean, self.std = norm_dict['mean'], norm_dict['std']
@@ -51,10 +55,13 @@ class ComaDataset(InMemoryDataset):
         train_data, val_data, test_data = [], [], []
         train_vertices = []
         for idx, data_file in tqdm(enumerate(self.data_file)):
+            print('\n\n' + data_file + '\n\n')
             mesh = Mesh(filename=data_file)
             mesh_verts = torch.Tensor(mesh.v)
             adjacency = get_vert_connectivity(mesh.v, mesh.f).tocoo()
-            edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col)))
+            print(adjacency.row)
+            edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col))).type(torch.LongTensor)
+            print(edge_index)
             data = Data(x=mesh_verts, y=mesh_verts, edge_index=edge_index)
 
             if self.split == 'sliced':
@@ -133,6 +140,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     split = args.split
     data_dir = args.data_dir
+    print(data_dir)
     if split == 'sliced':
         prepare_sliced_dataset(data_dir)
     elif split == 'expressioin':
