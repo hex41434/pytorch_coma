@@ -78,8 +78,8 @@ def main(args):
     batch_size = config['batch_size']
     val_losses, accs, durations = [], [], []
 
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    device = 'cpu'
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = 'cpu'
 
     print('Generating transforms')
     M, A, D, U = mesh_operations.generate_transform_matrices(template_mesh, config['downsampling_factors'])

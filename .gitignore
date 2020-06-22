@@ -1,8 +1,7 @@
 *.pyc
 *.npy
-/MyLib_
-/MyLib
-/_MyLib_
-/Data
 /rawData
+/rawData_face
+/chkpt_face
 /chkpt
+/template
