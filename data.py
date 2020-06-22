@@ -56,7 +56,8 @@ class ComaDataset(InMemoryDataset):
         for idx, data_file in tqdm(enumerate(self.data_file)):
             # print('\n\n' + data_file + '\n\n')
             mesh = Mesh(filename=data_file)
-            mesh_verts = torch.Tensor(mesh.v)
+            mesh_verts = torch.Tensor(mesh.v)            
+            # print(mesh.v)
             adjacency = get_vert_connectivity(mesh.v, mesh.f).tocoo()
             # print(adjacency.row)
             edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col))).type(torch.LongTensor)

@@ -101,6 +101,8 @@ def main(args):
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
+    print("x :{}, y : {} , pos :{} for dataset[0] element".format(dataset[0].x ,dataset[0].y, dataset[0].pos))
+
     print('Loading model')
     start_epoch = 1
     coma = Coma(dataset, config, D_t, U_t, A_t, num_nodes)
@@ -135,6 +137,8 @@ def main(args):
 
     for epoch in range(start_epoch, total_epochs + 1):
         print("Training for epoch ", epoch)
+        print(len(dataset))
+        
         train_loss = train(coma, train_loader, len(dataset), optimizer, device)
         val_loss = evaluate(coma, output_dir, test_loader, dataset_test, template_mesh, device, visualize=visualize)
 
@@ -160,7 +164,8 @@ def train(coma, train_loader, len_dataset, optimizer, device):
         data = data.to(device)
         optimizer.zero_grad()
         out = coma(data)
-        loss = F.l1_loss(out, data.y)
+        # loss = F.l1_loss(out, data.y)
+        loss = F.mse_loss(out, data.y)
         total_loss += data.num_graphs * loss.item()
         loss.backward()
         optimizer.step()

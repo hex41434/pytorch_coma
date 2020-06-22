@@ -4,10 +4,10 @@ import configparser
 def set_default_parameters(config):
     config.add_section('Input Output')
     config.set('Input Output', 'visualize', 'False')
-    config.set('Input Output', 'data_dir', 'rawData')
+    config.set('Input Output', 'data_dir', 'rawData_face')
     config.set('Input Output', 'checkpoint_dir', './chkpt')
     config.set('Input Output', 'visual_output_dir', '')
-    config.set('Input Output', 'template_fname', './template/template.obj')
+    config.set('Input Output', 'template_fname', './template/template_face.obj')
 
     config.add_section('Model Parameters')
     config.set('Model Parameters', 'eval', 'False')
