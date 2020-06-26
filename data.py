@@ -37,6 +37,7 @@ class ComaDataset(InMemoryDataset):
         norm_dict = torch.load(norm_path)
         self.mean, self.std = norm_dict['mean'], norm_dict['std']
         self.data, self.slices = torch.load(data_path)
+        
         if self.transform:
             self.data = [self.transform(td) for td in self.data]
 
@@ -50,7 +51,7 @@ class ComaDataset(InMemoryDataset):
         processed_files = [self.split_term+'_'+pf for pf in processed_files]
         return processed_files
 
-    def process(self):
+    def process(self,transform=None):
         train_data, val_data, test_data = [], [], []
         train_vertices = []
         for idx, data_file in tqdm(enumerate(self.data_file)):
@@ -62,7 +63,17 @@ class ComaDataset(InMemoryDataset):
             # print(adjacency.row)
             edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col))).type(torch.LongTensor)
             # print(edge_index)
+
+            mesh_verts = mesh_verts - mesh_verts.mean(dim=-2, keepdim=True)
+            scale = (1 / mesh_verts.abs().max()) * 0.999999
+            mesh_verts = mesh_verts * scale
+
             data = Data(x=mesh_verts, y=mesh_verts, edge_index=edge_index)
+
+            # taken from pyG (transform.NormalizedScale())
+            # data.x = data.x - data.x.mean(dim=-2, keepdim=True)
+            # scale = (1 / data.x.abs().max()) * 0.999999
+            # data.x = data.x * scale
 
             if self.split == 'sliced':
                 if idx % 100 <= 10:
@@ -106,13 +117,17 @@ class ComaDataset(InMemoryDataset):
             val_data = [self.pre_transform(td) for td in val_data]
             test_data = [self.pre_transform(td) for td in test_data]
 
+            print('train_data[0].x : {}'.format(train_data[0].x))
+            print('\n\n')
+            print('train_data[0].x : {}'.format(train_data[1].x))
+
         torch.save(self.collate(train_data), self.processed_paths[0])
         torch.save(self.collate(val_data), self.processed_paths[1])
         torch.save(self.collate(test_data), self.processed_paths[2])
         torch.save(norm_dict, self.processed_paths[3])
 
 def prepare_sliced_dataset(path):
-    ComaDataset(path, pre_transform=Normalize())
+    ComaDataset(path, pre_transform=NormalizedScale())
 
 
 def prepare_expression_dataset(path):

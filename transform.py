@@ -10,6 +10,11 @@ class Normalize(object):
         assert self.mean is not None and self.std is not None, ('Initialize mean and std to normalize with')
         self.mean = torch.as_tensor(self.mean, dtype=data.x.dtype, device=data.x.device)
         self.std = torch.as_tensor(self.std, dtype=data.x.dtype, device=data.x.device)
+        
+        
+        print('mean : {} , \nstd :{} '.format(self.mean,self.std))
+        print('data.x.dtype : {} '.format(data.x.dtype))
+
         data.x = (data.x - self.mean)/self.std
         data.y = (data.y - self.mean)/self.std
         return data

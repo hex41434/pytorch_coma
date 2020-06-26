@@ -12,6 +12,7 @@ from model import Coma
 from psbody.mesh import Mesh, MeshViewer
 from torch_geometric.data import DataLoader
 from transform import Normalize
+import torch_geometric.transforms as T
 
 
 def scipy_to_torch_sparse(scp_matrix):
@@ -95,13 +96,15 @@ def main(args):
     else:
         data_dir = config['data_dir']
 
-    normalize_transform = Normalize()
-    dataset = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term, pre_transform=normalize_transform)
-    dataset_test = ComaDataset(data_dir, dtype='test', split=args.split, split_term=args.split_term, pre_transform=normalize_transform)
+    print('*** data loaded from {} ***'.format(data_dir))
+    # normalize_transform = Normalize()
+    dataset = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term)
+    dataset_test = ComaDataset(data_dir, dtype='test', split=args.split, split_term=args.split_term)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
-    print("x :{}, y : {} , pos :{} for dataset[0] element".format(dataset[0].x ,dataset[0].y, dataset[0].pos))
+    # print("x :\n{}, \ny :\n{} , x-y :\n{} for dataset[0] element".format(dataset[0].x ,dataset[0].y,dataset[0].y-dataset[0].x))
+    print("x :\n{} for dataset[0] element".format(dataset[0].x))
 
     print('Loading model')
     start_epoch = 1
@@ -166,13 +169,14 @@ def train(coma, train_loader, len_dataset, optimizer, device):
         out = coma(data)
         # loss = F.l1_loss(out, data.y)
         loss = F.mse_loss(out, data.y)
+        # print("\n\ncoma output is {} \n\n".format(out))
         total_loss += data.num_graphs * loss.item()
         loss.backward()
         optimizer.step()
     return total_loss / len_dataset
 
 
-def evaluate(coma, output_dir, test_loader, dataset, template_mesh, device, visualize=False):
+def evaluate(coma, output_dir, test_loader, dataset, template_mesh, device, visualize=True):
     coma.eval()
     total_loss = 0
     meshviewer = MeshViewer(shape=(1, 2))
