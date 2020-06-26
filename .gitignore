@@ -1,7 +1,9 @@
 *.pyc
 *.npy
 /rawData
+/rawData_main
 /rawData_face
 /chkpt_face
 /chkpt
 /template
+/abd
