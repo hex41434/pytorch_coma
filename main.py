@@ -13,6 +13,7 @@ from psbody.mesh import Mesh, MeshViewer
 from torch_geometric.data import DataLoader
 from transform import Normalize
 import torch_geometric.transforms as T
+# from torchsummary import summary
 
 
 def scipy_to_torch_sparse(scp_matrix):
@@ -82,13 +83,15 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = 'cpu'
 
+    ds_factors = config['downsampling_factors']
     print('Generating transforms')
-    M, A, D, U = mesh_operations.generate_transform_matrices(template_mesh, config['downsampling_factors'])
+    M, A, D, U = mesh_operations.generate_transform_matrices(template_mesh, ds_factors)
 
     D_t = [scipy_to_torch_sparse(d).to(device) for d in D]
     U_t = [scipy_to_torch_sparse(u).to(device) for u in U]
     A_t = [scipy_to_torch_sparse(a).to(device) for a in A]
     num_nodes = [len(M[i].v) for i in range(len(M))]
+    print(num_nodes)
 
     print('\n\n*** Loading Dataset ***\n\n')
     if args.data_dir:
@@ -97,7 +100,7 @@ def main(args):
         data_dir = config['data_dir']
 
     print('*** data loaded from {} ***'.format(data_dir))
-    # normalize_transform = Normalize()
+
     dataset = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term)
     dataset_test = ComaDataset(data_dir, dtype='test', split=args.split, split_term=args.split_term)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
@@ -106,9 +109,11 @@ def main(args):
     # print("x :\n{}, \ny :\n{} , x-y :\n{} for dataset[0] element".format(dataset[0].x ,dataset[0].y,dataset[0].y-dataset[0].x))
     print("x :\n{} for dataset[0] element".format(dataset[0].x))
 
-    print('Loading model')
+    print('Loading Model : \n')
     start_epoch = 1
     coma = Coma(dataset, config, D_t, U_t, A_t, num_nodes)
+    print(coma)
+
     if opt == 'adam':
         optimizer = torch.optim.Adam(coma.parameters(), lr=lr, weight_decay=weight_decay)
     elif opt == 'sgd':
@@ -116,18 +121,20 @@ def main(args):
     else:
         raise Exception('No optimizer provided')
 
-    checkpoint_file = config['checkpoint_file']
-    print(checkpoint_file)
-    if checkpoint_file:
-        checkpoint = torch.load(checkpoint_file)
-        start_epoch = checkpoint['epoch_num']
-        coma.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        #To find if this is fixed in pytorch
-        for state in optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.to(device)
+    fresh_exec = True    
+    if not fresh_exec:
+        checkpoint_file = config['checkpoint_file']
+        print('\n\nloading from {}\n'.format(checkpoint_file))
+        if checkpoint_file:
+            checkpoint = torch.load(checkpoint_file)
+            start_epoch = checkpoint['epoch_num']
+            coma.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            #To find if this is fixed in pytorch
+            for state in optimizer.state.values():
+                for k, v in state.items():
+                    if isinstance(v, torch.Tensor):
+                        state[k] = v.to(device)
     coma.to(device)
 
     if eval_flag:
@@ -195,7 +202,12 @@ def evaluate(coma, output_dir, test_loader, dataset, template_mesh, device, visu
             expected_mesh = Mesh(v=expected_out, f=template_mesh.f)
             meshviewer[0][0].set_dynamic_meshes([result_mesh])
             meshviewer[0][1].set_dynamic_meshes([expected_mesh])
-            meshviewer[0][0].save_snapshot(os.path.join(output_dir, 'file'+str(i)+'.png'), blocking=False)
+            meshviewer[0][0].save_snapshot(os.path.join(output_dir, 'file'+str(i)+'.png'), blocking=True)
+
+            result_mesh.write_ply('{}/result_{}.ply'.format(output_dir,i))
+            expected_mesh.write_ply('{}/expected_{}.ply'.format(output_dir,i))
+            print('result mesh and expected mesh are saved as .ply')
+            
 
     return total_loss/len(dataset)
 

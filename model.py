@@ -7,7 +7,7 @@ class Coma(torch.nn.Module):
 
     def __init__(self, dataset, config, downsample_matrices, upsample_matrices, adjacency_matrices, num_nodes):
         super(Coma, self).__init__()
-        self.n_layers = config['n_layers']
+        self.n_layers = len(config['downsampling_factors'])
         self.filters = config['num_conv_filters']
         self.filters.insert(0, dataset.num_features)  # To get initial features per node
         self.K = config['polygon_order']

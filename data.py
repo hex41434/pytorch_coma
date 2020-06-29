@@ -64,6 +64,7 @@ class ComaDataset(InMemoryDataset):
             edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col))).type(torch.LongTensor)
             # print(edge_index)
 
+            # taken from pyG (transform.NormalizedScale())
             mesh_verts = mesh_verts - mesh_verts.mean(dim=-2, keepdim=True)
             scale = (1 / mesh_verts.abs().max()) * 0.999999
             mesh_verts = mesh_verts * scale

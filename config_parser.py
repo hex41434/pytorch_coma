@@ -5,18 +5,24 @@ def set_default_parameters(config):
     config.add_section('Input Output')
     config.set('Input Output', 'visualize', 'False')
     config.set('Input Output', 'data_dir', '../rawData_main')
-    config.set('Input Output', 'checkpoint_dir', './chkpt')
-    config.set('Input Output', 'visual_output_dir', '')
+    # config.set('Input Output', 'data_dir', '../rawData')
+    config.set('Input Output', 'checkpoint_dir', '../chkpt')
+    config.set('Input Output', 'visual_output_dir', '../output_dir')
     config.set('Input Output', 'template_fname', './template/template.obj')
 
     config.add_section('Model Parameters')
     config.set('Model Parameters', 'eval', 'False')
-    config.set('Model Parameters', 'checkpoint_file', '')
-    config.set('Model Parameters', 'n_layers', '4')
+    config.set('Model Parameters', 'checkpoint_file', '../chkpt/checkpoint_40.pt')
     config.set('Model Parameters', 'z', '16')
-    config.set('Model Parameters', 'downsampling_factors', '4, 2, 1, 1')
-    config.set('Model Parameters', 'num_conv_filters', '16, 16, 16, 32,32')
-    config.set('Model Parameters', 'polygon_order', '3, 3, 3, 3,3')
+    
+    config.set('Model Parameters', 'downsampling_factors', '2,2,2,2,1,1')
+    config.set('Model Parameters', 'n_layers', '0')
+    
+    config.set('Model Parameters', 'num_conv_filters', '8, 16, 32, 32, 32, 32 ,32')
+    # config.set('Model Parameters', 'num_conv_filters', '16')
+    # config.set('Model Parameters', 'polygon_order', '3, 3, 3, 3,3,3')
+    config.set('Model Parameters', 'polygon_order', '3')
+
     config.set('Model Parameters', 'workers_thread', 6)
     config.set('Model Parameters', 'optimizer', 'sgd')
 
@@ -45,11 +51,18 @@ def read_config(fname):
 
     config_parms['eval'] = config.getboolean('Model Parameters', 'eval')
     config_parms['checkpoint_file'] = config.get('Model Parameters', 'checkpoint_file')
-    config_parms['n_layers'] = config.getint('Model Parameters', 'n_layers')
+    
     config_parms['z'] = config.getint('Model Parameters', 'z')
+
     config_parms['downsampling_factors'] =  [int(x) for x in config.get('Model Parameters', 'downsampling_factors').split(',')]
+    config_parms['n_layers'] = (len(config_parms['downsampling_factors']))
+
     config_parms['num_conv_filters'] = [int(x) for x in config.get('Model Parameters', 'num_conv_filters').split(',')]
-    config_parms['polygon_order'] = [int(x) for x in config.get('Model Parameters', 'polygon_order').split(',')]
+    # config_parms['num_conv_filters'] = (config_parms['n_layers']+1)* [config.getint('Model Parameters', 'num_conv_filters')] # (4*[3]-> [3,3,3,3])
+
+    # config_parms['polygon_order'] = [int(x) for x in config.get('Model Parameters', 'polygon_order').split(',')]
+    config_parms['polygon_order'] = (config_parms['n_layers']+1)*[config.getint('Model Parameters', 'polygon_order')] # (4*[3]-> [3,3,3,3])
+
     config_parms['workers_thread'] = config.getint('Model Parameters', 'workers_thread')
     config_parms['optimizer'] = config.get('Model Parameters', 'optimizer')
 
