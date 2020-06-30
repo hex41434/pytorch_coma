@@ -14,6 +14,9 @@ from torch_geometric.data import DataLoader
 from transform import Normalize
 import torch_geometric.transforms as T
 # from torchsummary import summary
+# from torch.utils.tensorboard import SummaryWriter
+# from tensorboardX import SummaryWriter
+from termcolor import colored
 
 
 def scipy_to_torch_sparse(scp_matrix):
@@ -82,6 +85,10 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = 'cpu'
+    if torch.cuda.is_available():
+        print(colored('\ncuda is available...\n', 'green'))
+    else:
+        print(colored('\ncuda is NOT available...\n', 'red'))
 
     ds_factors = config['downsampling_factors']
     print('Generating transforms')
@@ -113,6 +120,11 @@ def main(args):
     start_epoch = 1
     coma = Coma(dataset, config, D_t, U_t, A_t, num_nodes)
     print(coma)
+
+    # writer = SummaryWriter()
+    # writer.add_graph(coma)
+    # writer.flush()
+    # writer.close()
 
     if opt == 'adam':
         optimizer = torch.optim.Adam(coma.parameters(), lr=lr, weight_decay=weight_decay)
@@ -174,9 +186,8 @@ def train(coma, train_loader, len_dataset, optimizer, device):
         data = data.to(device)
         optimizer.zero_grad()
         out = coma(data)
-        # loss = F.l1_loss(out, data.y)
-        loss = F.mse_loss(out, data.y)
-        # print("\n\ncoma output is {} \n\n".format(out))
+        loss = F.l1_loss(out, data.y)
+        # print("\n\nnum_graphs is {} \n\n".format(data.num_graphs))
         total_loss += data.num_graphs * loss.item()
         loss.backward()
         optimizer.step()

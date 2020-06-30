@@ -12,14 +12,14 @@ def set_default_parameters(config):
 
     config.add_section('Model Parameters')
     config.set('Model Parameters', 'eval', 'False')
-    config.set('Model Parameters', 'checkpoint_file', '../chkpt/checkpoint_40.pt')
+    config.set('Model Parameters', 'checkpoint_file', '../chkpt/checkpoint_300.pt')
     config.set('Model Parameters', 'z', '16')
     
-    config.set('Model Parameters', 'downsampling_factors', '2,2,2,2,1,1')
+    config.set('Model Parameters', 'downsampling_factors', '4,3,2,1')
     config.set('Model Parameters', 'n_layers', '0')
     
-    config.set('Model Parameters', 'num_conv_filters', '8, 16, 32, 32, 32, 32 ,32')
-    # config.set('Model Parameters', 'num_conv_filters', '16')
+    # config.set('Model Parameters', 'num_conv_filters', '8, 16, 32, 32, 32, 32 ,32')
+    config.set('Model Parameters', 'num_conv_filters', '32')
     # config.set('Model Parameters', 'polygon_order', '3, 3, 3, 3,3,3')
     config.set('Model Parameters', 'polygon_order', '3')
 
@@ -57,8 +57,8 @@ def read_config(fname):
     config_parms['downsampling_factors'] =  [int(x) for x in config.get('Model Parameters', 'downsampling_factors').split(',')]
     config_parms['n_layers'] = (len(config_parms['downsampling_factors']))
 
-    config_parms['num_conv_filters'] = [int(x) for x in config.get('Model Parameters', 'num_conv_filters').split(',')]
-    # config_parms['num_conv_filters'] = (config_parms['n_layers']+1)* [config.getint('Model Parameters', 'num_conv_filters')] # (4*[3]-> [3,3,3,3])
+    # config_parms['num_conv_filters'] = [int(x) for x in config.get('Model Parameters', 'num_conv_filters').split(',')]
+    config_parms['num_conv_filters'] = (config_parms['n_layers']+1)* [config.getint('Model Parameters', 'num_conv_filters')] # (4*[3]-> [3,3,3,3])
 
     # config_parms['polygon_order'] = [int(x) for x in config.get('Model Parameters', 'polygon_order').split(',')]
     config_parms['polygon_order'] = (config_parms['n_layers']+1)*[config.getint('Model Parameters', 'polygon_order')] # (4*[3]-> [3,3,3,3])
