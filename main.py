@@ -13,7 +13,7 @@ from psbody.mesh import Mesh, MeshViewer
 from torch_geometric.data import DataLoader
 from transform import Normalize
 import torch_geometric.transforms as T
-# from torchsummary import summary
+import pytorch_model_summary as pms
 # from torch.utils.tensorboard import SummaryWriter
 # from tensorboardX import SummaryWriter
 from termcolor import colored
@@ -86,9 +86,9 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = 'cpu'
     if torch.cuda.is_available():
-        print(colored('\ncuda is available...\n', 'green'))
+        print(colored('\n...cuda is available...\n', 'green'))
     else:
-        print(colored('\ncuda is NOT available...\n', 'red'))
+        print(colored('\n...cuda is NOT available...\n', 'red'))
 
     ds_factors = config['downsampling_factors']
     print('Generating transforms')
@@ -114,8 +114,8 @@ def main(args):
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
     # print("x :\n{}, \ny :\n{} , x-y :\n{} for dataset[0] element".format(dataset[0].x ,dataset[0].y,dataset[0].y-dataset[0].x))
-    print("x :\n{} for dataset[0] element".format(dataset[0].x))
-
+    print("x :\n{} for dataset[0] element".format(dataset[0]))
+    print(colored(train_loader,'red'))
     print('Loading Model : \n')
     start_epoch = 1
     coma = Coma(dataset, config, D_t, U_t, A_t, num_nodes)
@@ -149,6 +149,12 @@ def main(args):
                         state[k] = v.to(device)
     coma.to(device)
 
+    for i, dt in enumerate(test_loader):
+        dt = dt.to(device) #why?!
+        print(pms.summary(coma, dt,batch_size=-1, show_input=True))
+        print(i,colored(dt,'green'))
+        break#for one sample only
+
     if eval_flag:
         val_loss = evaluate(coma, output_dir, test_loader, dataset_test, template_mesh, device, visualize)
         print('val loss', val_loss)
@@ -175,20 +181,20 @@ def main(args):
         if opt=='sgd':
             adjust_learning_rate(optimizer, lr_decay)
 
-    # if torch.cuda.is_available():
-    #     torch.cuda.synchronize()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
 
 
 def train(coma, train_loader, len_dataset, optimizer, device):
     coma.train()
     total_loss = 0
-    for data in train_loader:
-        data = data.to(device)
+    for btch in train_loader:
+        btch = btch.to(device)
         optimizer.zero_grad()
-        out = coma(data)
-        loss = F.l1_loss(out, data.y)
-        # print("\n\nnum_graphs is {} \n\n".format(data.num_graphs))
-        total_loss += data.num_graphs * loss.item()
+        out = coma(btch)
+        loss = F.l1_loss(out, btch.y)
+        # print(colored("\n\nnum_graphs is {} \n\n".format(btch.num_graphs),'blue'))
+        total_loss += btch.num_graphs * loss.item()
         loss.backward()
         optimizer.step()
     return total_loss / len_dataset

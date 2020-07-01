@@ -15,7 +15,7 @@ def set_default_parameters(config):
     config.set('Model Parameters', 'checkpoint_file', '../chkpt/checkpoint_300.pt')
     config.set('Model Parameters', 'z', '16')
     
-    config.set('Model Parameters', 'downsampling_factors', '4,3,2,1')
+    config.set('Model Parameters', 'downsampling_factors', '4,2,2,1')
     config.set('Model Parameters', 'n_layers', '0')
     
     # config.set('Model Parameters', 'num_conv_filters', '8, 16, 32, 32, 32, 32 ,32')
@@ -28,10 +28,10 @@ def set_default_parameters(config):
 
     config.add_section('Learning Parameters')
     config.set('Learning Parameters', 'batch_size', 16)
-    config.set('Learning Parameters', 'learning_rate', 5e-4)
+    config.set('Learning Parameters', 'learning_rate', 5e-2)
     config.set('Learning Parameters', 'learning_rate_decay', 0.99)
     config.set('Learning Parameters', 'weight_decay', 5e-4)
-    config.set('Learning Parameters', 'epoch', 300)
+    config.set('Learning Parameters', 'epoch', 250)
 
 
 def read_config(fname):

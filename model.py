@@ -28,9 +28,10 @@ class Coma(torch.nn.Module):
         self.reset_parameters()
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x = data.x
         batch_size = data.num_graphs
         x = x.reshape(batch_size, -1, self.filters[0])
+        
         x = self.encoder(x)
         x = self.decoder(x)
         x = x.reshape(-1, self.filters[0])
