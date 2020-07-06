@@ -1,8 +1,6 @@
 import argparse
 import os
-
 import numpy as np
-
 import mesh_operations
 import torch
 import torch.nn.functional as F
@@ -14,10 +12,9 @@ from torch_geometric.data import DataLoader
 from transform import Normalize
 import torch_geometric.transforms as T
 import pytorch_model_summary as pms
-# from torch.utils.tensorboard import SummaryWriter
-# from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from termcolor import colored
-
+import datetime
 
 def scipy_to_torch_sparse(scp_matrix):
     values = scp_matrix.data
@@ -34,14 +31,14 @@ def adjust_learning_rate(optimizer, lr_decay):
     for param_group in optimizer.param_groups:
         param_group['lr'] = param_group['lr'] * lr_decay
 
-def save_model(coma, optimizer, epoch, train_loss, val_loss, checkpoint_dir):
+def save_model(coma, optimizer, epoch, train_loss, val_loss, save_checkpoint_dir):
     checkpoint = {}
     checkpoint['state_dict'] = coma.state_dict()
     checkpoint['optimizer'] = optimizer.state_dict()
     checkpoint['epoch_num'] = epoch
     checkpoint['train_loss'] = train_loss
     checkpoint['val_loss'] = val_loss
-    torch.save(checkpoint, os.path.join(checkpoint_dir, 'checkpoint_'+ str(epoch)+'.pt'))
+    torch.save(checkpoint, os.path.join(save_checkpoint_dir,'checkpoint_'+ str(epoch)+'.pt'))
 
 def main(args):
     if not os.path.exists(args.conf):
@@ -49,26 +46,29 @@ def main(args):
 
     config = read_config(args.conf)
 
+    current_log_dir = (datetime.datetime.now() + datetime.timedelta(hours=2) ).strftime("%Y%m%d-%H%M%S")
+    current_log_dir = os.path.join('../Experiments/',current_log_dir)    
+    print(colored('logs will be saved in:{}'.format(current_log_dir),'yellow'))
+
+    if args.load_checkpoint_dir:
+        load_checkpoint_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,'chkpt')#load last checkpoint 
+        print(colored('load_checkpoint_dir: {}'.format(load_checkpoint_dir), 'red'))
+    
+    save_checkpoint_dir = os.path.join(current_log_dir , 'chkpt')
+    print(colored('save_checkpoint_dir: {}\n'.format(save_checkpoint_dir), 'yellow'))
+    if not os.path.exists(save_checkpoint_dir):
+        os.makedirs(save_checkpoint_dir)
+
     print('Initializing parameters')
     template_file_path = config['template_fname']
     template_mesh = Mesh(filename=template_file_path)
     print(template_file_path)
         
-    if args.checkpoint_dir:
-        checkpoint_dir = args.checkpoint_dir
-        print(os.path.exists(checkpoint_dir))
-
-    else:
-        checkpoint_dir = config['checkpoint_dir']
-        print(os.path.exists(checkpoint_dir))
-    # if not os.path.exists(checkpoint_dir):
-    #     os.makedirs(checkpoint_dir)
-
     visualize = config['visualize']
     output_dir = config['visual_output_dir']
     if visualize is True and not output_dir:
         print('No visual output directory is provided. Checkpoint directory will be used to store the visual results')
-        output_dir = checkpoint_dir
+        output_dir = save_checkpoint_dir
 
     # if not os.path.exists(output_dir):
     #     os.makedirs(output_dir)
@@ -84,7 +84,6 @@ def main(args):
     val_losses, accs, durations = [], [], []
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = 'cpu'
     if torch.cuda.is_available():
         print(colored('\n...cuda is available...\n', 'green'))
     else:
@@ -98,9 +97,8 @@ def main(args):
     U_t = [scipy_to_torch_sparse(u).to(device) for u in U]
     A_t = [scipy_to_torch_sparse(a).to(device) for a in A]
     num_nodes = [len(M[i].v) for i in range(len(M))]
-    print(num_nodes)
+    print(colored('number of nodes in encoder : {}'.format(num_nodes),'on_blue'))
 
-    print('\n\n*** Loading Dataset ***\n\n')
     if args.data_dir:
         data_dir = args.data_dir
     else:
@@ -113,18 +111,24 @@ def main(args):
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
-    # print("x :\n{}, \ny :\n{} , x-y :\n{} for dataset[0] element".format(dataset[0].x ,dataset[0].y,dataset[0].y-dataset[0].x))
     print("x :\n{} for dataset[0] element".format(dataset[0]))
     print(colored(train_loader,'red'))
     print('Loading Model : \n')
     start_epoch = 1
     coma = Coma(dataset, config, D_t, U_t, A_t, num_nodes)
-    print(coma)
 
-    # writer = SummaryWriter()
-    # writer.add_graph(coma)
-    # writer.flush()
-    # writer.close()
+    tbSummWriter = SummaryWriter(current_log_dir)
+
+    print(coma)
+    
+    mrkdwn = str('<pre><code>'+str(coma)+'</code></pre>')
+    tbSummWriter.add_text('tag2', mrkdwn , global_step=None, walltime=None)
+    
+    #write network architecture into text file 
+    logfile = os.path.join(current_log_dir, 'coma.txt')
+    my_data_file = open(logfile, 'w')
+    my_data_file.write(str(coma))
+    my_data_file.close()
 
     if opt == 'adam':
         optimizer = torch.optim.Adam(coma.parameters(), lr=lr, weight_decay=weight_decay)
@@ -133,12 +137,17 @@ def main(args):
     else:
         raise Exception('No optimizer provided')
 
-    fresh_exec = True    
-    if not fresh_exec:
-        checkpoint_file = config['checkpoint_file']
-        print('\n\nloading from {}\n'.format(checkpoint_file))
+    if args.load_checkpoint_dir:
+        #to load the newest saved checkpoint
+        to_back = os.getcwd()
+        os.chdir(load_checkpoint_dir)
+        chkpt_list = sorted(os.listdir(os.getcwd()), key=os.path.getctime)
+        os.chdir(to_back)
+        checkpoint_file = chkpt_list[-1]
+
+        print(colored('\n\nloading Newest checkpoint : {}\n'.format(checkpoint_file),'red'))
         if checkpoint_file:
-            checkpoint = torch.load(checkpoint_file)
+            checkpoint = torch.load(os.path.join(load_checkpoint_dir,checkpoint_file))
             start_epoch = checkpoint['epoch_num']
             coma.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
@@ -149,10 +158,21 @@ def main(args):
                         state[k] = v.to(device)
     coma.to(device)
 
-    for i, dt in enumerate(test_loader):
+    for i, dt in enumerate(train_loader):
         dt = dt.to(device) #why?!
-        print(pms.summary(coma, dt,batch_size=-1, show_input=True))
-        print(i,colored(dt,'green'))
+        graphstr = pms.summary(coma, dt,batch_size=-1, show_input=True , show_hierarchical=False)
+        print(graphstr)
+        print(colored('dt in enumerate(train_loader):{} '.format(dt),'green'))
+        
+        #write network architecture into text file 
+        logfile = os.path.join(current_log_dir, 'pms.txt')
+        my_data_file = open(logfile, 'w')
+        my_data_file.write(graphstr)
+        my_data_file.close()
+        
+        mrkdwn = str('<pre><code>'+graphstr+'</code></pre>')
+        tbSummWriter.add_text('tag', mrkdwn, global_step=None, walltime=None)
+    
         break#for one sample only
 
     if eval_flag:
@@ -170,9 +190,14 @@ def main(args):
         train_loss = train(coma, train_loader, len(dataset), optimizer, device)
         val_loss = evaluate(coma, output_dir, test_loader, dataset_test, template_mesh, device, visualize=visualize)
 
+        tbSummWriter.add_scalar('Loss/train',train_loss,epoch)
+        tbSummWriter.add_scalar('Val Loss/train',val_loss,epoch)
+        tbSummWriter.add_scalar('learning_rate',lr,epoch)
+
+
         print('epoch ', epoch,' Train loss ', train_loss, ' Val loss ', val_loss)
         if val_loss < best_val_loss:
-            save_model(coma, optimizer, epoch, train_loss, val_loss, checkpoint_dir)
+            save_model(coma, optimizer, epoch, train_loss, val_loss, save_checkpoint_dir)
             best_val_loss = val_loss
 
         val_loss_history.append(val_loss)
@@ -183,6 +208,9 @@ def main(args):
 
     if torch.cuda.is_available():
         torch.cuda.synchronize()
+
+    tbSummWriter.flush()
+    tbSummWriter.close()    
 
 
 def train(coma, train_loader, len_dataset, optimizer, device):
@@ -237,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('-st', '--split_term', default='sliced', help='split term can be sliced, expression name '
                                                                'or identity name')
     parser.add_argument('-d', '--data_dir', help='path where the downloaded data is stored')
-    parser.add_argument('-cp', '--checkpoint_dir', help='path where checkpoints file need to be stored')
+    parser.add_argument('-cp', '--load_checkpoint_dir', help='path where checkpoints file need to be stored')
 
     args = parser.parse_args()
 

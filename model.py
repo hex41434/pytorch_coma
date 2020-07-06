@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from termcolor import colored
 
 from layers import ChebConv_Coma, Pool
 
@@ -30,6 +31,7 @@ class Coma(torch.nn.Module):
     def forward(self, data):
         x = data.x
         batch_size = data.num_graphs
+        # print(colored(batch_size,'blue'))
         x = x.reshape(batch_size, -1, self.filters[0])
         
         x = self.encoder(x)

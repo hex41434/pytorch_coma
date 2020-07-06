@@ -6,13 +6,14 @@ def set_default_parameters(config):
     config.set('Input Output', 'visualize', 'False')
     config.set('Input Output', 'data_dir', '../rawData_main')
     # config.set('Input Output', 'data_dir', '../rawData')
-    config.set('Input Output', 'checkpoint_dir', '../chkpt')
+    config.set('Input Output', 'load_checkpoint_dir', 'xx')# load last checkpoint from this directory
     config.set('Input Output', 'visual_output_dir', '../output_dir')
     config.set('Input Output', 'template_fname', './template/template.obj')
 
     config.add_section('Model Parameters')
     config.set('Model Parameters', 'eval', 'False')
-    config.set('Model Parameters', 'checkpoint_file', '../chkpt/checkpoint_300.pt')
+    # config.set('Model Parameters', 'checkpoint_file', '../chkpt_Jul03/checkpoint_247.pt')
+    config.set('Model Parameters', 'checkpoint_file', 'xx.pt')
     config.set('Model Parameters', 'z', '16')
     
     config.set('Model Parameters', 'downsampling_factors', '4,2,2,1')
@@ -31,7 +32,7 @@ def set_default_parameters(config):
     config.set('Learning Parameters', 'learning_rate', 5e-2)
     config.set('Learning Parameters', 'learning_rate_decay', 0.99)
     config.set('Learning Parameters', 'weight_decay', 5e-4)
-    config.set('Learning Parameters', 'epoch', 250)
+    config.set('Learning Parameters', 'epoch', 300)
 
 
 def read_config(fname):
@@ -45,7 +46,7 @@ def read_config(fname):
     config_parms = {}
     config_parms['visualize'] = config.getboolean('Input Output', 'visualize')
     config_parms['data_dir'] = config.get('Input Output', 'data_dir')
-    config_parms['checkpoint_dir'] = config.get('Input Output', 'checkpoint_dir')
+    config_parms['load_checkpoint_dir'] = config.get('Input Output', 'load_checkpoint_dir')
     config_parms['template_fname'] = config.get('Input Output', 'template_fname')
     config_parms['visual_output_dir'] = config.get('Input Output', 'visual_output_dir')
 
