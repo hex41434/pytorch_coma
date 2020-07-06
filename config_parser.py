@@ -7,7 +7,7 @@ def set_default_parameters(config):
     config.set('Input Output', 'data_dir', '../rawData_main')
     # config.set('Input Output', 'data_dir', '../rawData')
     config.set('Input Output', 'load_checkpoint_dir', 'xx')# load last checkpoint from this directory
-    config.set('Input Output', 'visual_output_dir', '../output_dir')
+    config.set('Input Output', 'visual_output_dir', 'xx')
     config.set('Input Output', 'template_fname', './template/template.obj')
 
     config.add_section('Model Parameters')
@@ -32,7 +32,7 @@ def set_default_parameters(config):
     config.set('Learning Parameters', 'learning_rate', 5e-2)
     config.set('Learning Parameters', 'learning_rate_decay', 0.99)
     config.set('Learning Parameters', 'weight_decay', 5e-4)
-    config.set('Learning Parameters', 'epoch', 300)
+    config.set('Learning Parameters', 'epoch', 250)
 
 
 def read_config(fname):
@@ -60,10 +60,8 @@ def read_config(fname):
 
     # config_parms['num_conv_filters'] = [int(x) for x in config.get('Model Parameters', 'num_conv_filters').split(',')]
     config_parms['num_conv_filters'] = (config_parms['n_layers']+1)* [config.getint('Model Parameters', 'num_conv_filters')] # (4*[3]-> [3,3,3,3])
-
     # config_parms['polygon_order'] = [int(x) for x in config.get('Model Parameters', 'polygon_order').split(',')]
     config_parms['polygon_order'] = (config_parms['n_layers']+1)*[config.getint('Model Parameters', 'polygon_order')] # (4*[3]-> [3,3,3,3])
-
     config_parms['workers_thread'] = config.getint('Model Parameters', 'workers_thread')
     config_parms['optimizer'] = config.get('Model Parameters', 'optimizer')
 

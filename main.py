@@ -45,14 +45,26 @@ def main(args):
         print('Config not found' + args.conf)
 
     config = read_config(args.conf)
+    print(colored(str(config),'cyan'))
 
-    current_log_dir = (datetime.datetime.now() + datetime.timedelta(hours=2) ).strftime("%Y%m%d-%H%M%S")
-    current_log_dir = os.path.join('../Experiments/',current_log_dir)    
+    eval_flag = config['eval']
+    
+    if not eval_flag: #train mode : fresh or reload
+        current_log_dir = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        current_log_dir = os.path.join('../Experiments/',current_log_dir)    
+    else:#eval mode : save result plys     
+        if args.load_checkpoint_dir:
+            current_log_dir = '../Eval'
+        else:
+            print(colored('*****please provide checkpoint file path to reload!*****','red'))
+            return
+    
     print(colored('logs will be saved in:{}'.format(current_log_dir),'yellow'))
 
     if args.load_checkpoint_dir:
         load_checkpoint_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,'chkpt')#load last checkpoint 
         print(colored('load_checkpoint_dir: {}'.format(load_checkpoint_dir), 'red'))
+
     
     save_checkpoint_dir = os.path.join(current_log_dir , 'chkpt')
     print(colored('save_checkpoint_dir: {}\n'.format(save_checkpoint_dir), 'yellow'))
@@ -63,17 +75,8 @@ def main(args):
     template_file_path = config['template_fname']
     template_mesh = Mesh(filename=template_file_path)
     print(template_file_path)
-        
+
     visualize = config['visualize']
-    output_dir = config['visual_output_dir']
-    if visualize is True and not output_dir:
-        print('No visual output directory is provided. Checkpoint directory will be used to store the visual results')
-        output_dir = save_checkpoint_dir
-
-    # if not os.path.exists(output_dir):
-    #     os.makedirs(output_dir)
-
-    eval_flag = config['eval']
     lr = config['learning_rate']
     lr_decay = config['learning_rate_decay']
     weight_decay = config['weight_decay']
@@ -97,7 +100,7 @@ def main(args):
     U_t = [scipy_to_torch_sparse(u).to(device) for u in U]
     A_t = [scipy_to_torch_sparse(a).to(device) for a in A]
     num_nodes = [len(M[i].v) for i in range(len(M))]
-    print(colored('number of nodes in encoder : {}'.format(num_nodes),'on_blue'))
+    print(colored('number of nodes in encoder : {}'.format(num_nodes),'blue'))
 
     if args.data_dir:
         data_dir = args.data_dir
@@ -119,8 +122,10 @@ def main(args):
 
     tbSummWriter = SummaryWriter(current_log_dir)
 
-    print(coma)
-    
+    print_model_summary = False
+    if print_model_summary:
+        print(coma)
+
     mrkdwn = str('<pre><code>'+str(coma)+'</code></pre>')
     tbSummWriter.add_text('tag2', mrkdwn , global_step=None, walltime=None)
     
@@ -145,6 +150,11 @@ def main(args):
         os.chdir(to_back)
         checkpoint_file = chkpt_list[-1]
 
+        logfile = os.path.join(current_log_dir, 'loadedfrom.txt')
+        my_data_file = open(logfile, 'w')
+        my_data_file.write(str(load_checkpoint_dir))
+        my_data_file.close()
+
         print(colored('\n\nloading Newest checkpoint : {}\n'.format(checkpoint_file),'red'))
         if checkpoint_file:
             checkpoint = torch.load(os.path.join(load_checkpoint_dir,checkpoint_file))
@@ -161,9 +171,10 @@ def main(args):
     for i, dt in enumerate(train_loader):
         dt = dt.to(device) #why?!
         graphstr = pms.summary(coma, dt,batch_size=-1, show_input=True , show_hierarchical=False)
-        print(graphstr)
+        if print_model_summary:
+            print(graphstr)
+
         print(colored('dt in enumerate(train_loader):{} '.format(dt),'green'))
-        
         #write network architecture into text file 
         logfile = os.path.join(current_log_dir, 'pms.txt')
         my_data_file = open(logfile, 'w')
@@ -172,11 +183,12 @@ def main(args):
         
         mrkdwn = str('<pre><code>'+graphstr+'</code></pre>')
         tbSummWriter.add_text('tag', mrkdwn, global_step=None, walltime=None)
-    
         break#for one sample only
 
-    if eval_flag:
-        val_loss = evaluate(coma, output_dir, test_loader, dataset_test, template_mesh, device, visualize)
+    if eval_flag and args.load_checkpoint_dir:
+        evaluatedFrom = 'predictedPlys_' + checkpoint_file 
+        output_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,evaluatedFrom)#load last checkpoint 
+        val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=True, output_dir=output_dir)
         print('val loss', val_loss)
         return
 
@@ -185,10 +197,10 @@ def main(args):
 
     for epoch in range(start_epoch, total_epochs + 1):
         print("Training for epoch ", epoch)
-        print(len(dataset))
+        print('dataset.len : {}'.format(len(dataset)))
         
         train_loss = train(coma, train_loader, len(dataset), optimizer, device)
-        val_loss = evaluate(coma, output_dir, test_loader, dataset_test, template_mesh, device, visualize=visualize)
+        val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=False, output_dir='')#train without visualization
 
         tbSummWriter.add_scalar('Loss/train',train_loss,epoch)
         tbSummWriter.add_scalar('Val Loss/train',val_loss,epoch)
@@ -228,7 +240,7 @@ def train(coma, train_loader, len_dataset, optimizer, device):
     return total_loss / len_dataset
 
 
-def evaluate(coma, output_dir, test_loader, dataset, template_mesh, device, visualize=True):
+def evaluate(coma , test_loader, dataset, template_mesh, device, visualize , output_dir):
     coma.eval()
     total_loss = 0
     meshviewer = MeshViewer(shape=(1, 2))
