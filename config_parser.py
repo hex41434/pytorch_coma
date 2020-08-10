@@ -32,7 +32,7 @@ def set_default_parameters(config):
     config.set('Learning Parameters', 'learning_rate', 5e-2)
     config.set('Learning Parameters', 'learning_rate_decay', 0.99)
     config.set('Learning Parameters', 'weight_decay', 5e-4)
-    config.set('Learning Parameters', 'epoch', 250)
+    config.set('Learning Parameters', 'epoch', 600)
 
 
 def read_config(fname):

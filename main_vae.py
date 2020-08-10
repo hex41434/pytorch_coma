@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from config_parser import read_config
 from data import ComaDataset
-from model import Coma
+from model_vae import ComaVAE
 from psbody.mesh import Mesh, MeshViewer
 from torch_geometric.data import DataLoader
 from transform import Normalize
@@ -118,7 +118,7 @@ def main(args):
     print(colored(train_loader,'red'))
     print('Loading Model : \n')
     start_epoch = 1
-    coma = Coma(dataset, config, D_t, U_t, A_t, num_nodes)
+    coma = ComaVAE(dataset, config, D_t, U_t, A_t, num_nodes)
 
     tbSummWriter = SummaryWriter(current_log_dir)
 
@@ -201,6 +201,7 @@ def main(args):
         
         train_loss = train(coma, train_loader, len(dataset), optimizer, device)
         val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=False, output_dir='')#train without visualization
+        sample_latent_space(coma,epoch,device,template_mesh,current_log_dir)
 
         tbSummWriter.add_scalar('Loss/train',train_loss,epoch)
         tbSummWriter.add_scalar('Val Loss/train',val_loss,epoch)
@@ -225,18 +226,32 @@ def main(args):
     tbSummWriter.close()    
 
 
-def loss_function(out,batch_y):
-    return F.l1_loss(out,batch_y)
+def loss_function(out,batch_y, mu,logvar):
+    l1 = F.l1_loss(out,batch_y)
+    # kl = (-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()))
+    kl = (-0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp()))
+    l = l1+kl
+    return l 
 
+def sample_latent_space(coma,epoch, device,template_mesh,current_log_dir):
+    nz = 16
+    with torch.no_grad():
+        sample = torch.randn(1, nz).to(device)
+        meshsample = coma.decoder(sample).cpu()
+        pth = os.path.join(current_log_dir,'./sample_plys')
+        if epoch % 10 == 0:
+            v = meshsample.view(381,3)
+            result_mesh = Mesh(v = v, f=template_mesh.f)            
+            result_mesh.write_ply(os.path.join(pth,f'meshsample_{epoch}.ply'))
+        
 def train(coma, train_loader, len_dataset, optimizer, device):
     coma.train()
     total_loss = 0
     for btch in train_loader:
         btch = btch.to(device)
         optimizer.zero_grad()
-        out = coma(btch)
-        # loss = F.l1_loss(out,btch.y)
-        loss = loss_function(out,btch.y)
+        out,mu,logvar = coma(btch)
+        loss = loss_function(out,btch.y,mu,logvar)
         # print(colored("\n\nnum_graphs is {} \n\n".format(btch.num_graphs),'blue'))
         total_loss += btch.num_graphs * loss.item()
         loss.backward()
@@ -247,16 +262,17 @@ def train(coma, train_loader, len_dataset, optimizer, device):
 def evaluate(coma , test_loader, dataset, template_mesh, device, visualize , output_dir):
     coma.eval()
     total_loss = 0
-    meshviewer = MeshViewer(shape=(1, 2))
+    
     for i, data in enumerate(test_loader):
         data = data.to(device)
         with torch.no_grad():
-            out = coma(data)
-        # loss = F.l1_loss(out,data.y)
-        loss = loss_function(out,data.y)
+            out,mu,logvar = coma(data)
+        loss = loss_function(out,data.y,mu, logvar)
         total_loss += data.num_graphs * loss.item()
 
         if visualize and i % 100 == 0:
+            meshviewer = MeshViewer(shape=(1, 2))
+
             save_out = out.detach().cpu().numpy()
             save_out = save_out*dataset.std.numpy()+dataset.mean.numpy()
             expected_out = (data.y.detach().cpu().numpy())*dataset.std.numpy()+dataset.mean.numpy()
