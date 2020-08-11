@@ -57,9 +57,8 @@ def main(args):
             print(colored('*****please provide checkpoint file path to reload!*****','red'))
             return #exit if not provided
         else:
-            # current_log_dir = '../Eval'
-            current_log_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,'_Eval')
             #this folder (_Eval) contains unnecessary informatio and could be removed... 
+            current_log_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,'_Eval')
     
     print(colored('logs will be saved in:{}'.format(current_log_dir),'yellow'))
 
@@ -72,6 +71,11 @@ def main(args):
     if not os.path.exists(save_checkpoint_dir):
         os.makedirs(save_checkpoint_dir)
 
+    with open(os.path.join(current_log_dir, 'config.txt'),'a') as f: 
+        for cf in config:
+            f.write(str(cf) + ' : ')
+            f.write(str(config[cf]) + '\n')
+           
     print('Initializing parameters')
     template_file_path = config['template_fname']
     template_mesh = Mesh(filename=template_file_path)
@@ -189,7 +193,7 @@ def main(args):
     if eval_flag and args.load_checkpoint_dir:
         evaluatedFrom = 'predictedPlys_' + checkpoint_file 
         output_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,evaluatedFrom)#load last checkpoint 
-        val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=True, output_dir=output_dir)
+        val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=False, output_dir=output_dir, eval_flag=eval_flag)
         print('val loss', val_loss)
         return
 
@@ -201,7 +205,7 @@ def main(args):
         print('dataset.len : {}'.format(len(dataset)))
         
         train_loss = train(coma, train_loader, len(dataset), optimizer, device)
-        val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=False, output_dir='')#train without visualization
+        val_loss = evaluate(coma, test_loader, dataset_test, template_mesh, device, visualize=False, output_dir='',eval_flag=eval_flag)#train without visualization
         sample_latent_space(coma,epoch,device,template_mesh,current_log_dir)
 
         tbSummWriter.add_scalar('Loss/train',train_loss,epoch)
@@ -262,7 +266,7 @@ def train(coma, train_loader, len_dataset, optimizer, device):
     return total_loss / len_dataset
 
 
-def evaluate(coma , test_loader, dataset, template_mesh, device, visualize , output_dir):
+def evaluate(coma , test_loader, dataset, template_mesh, device, visualize, output_dir,eval_flag):
     coma.eval()
     total_loss = 0
     
@@ -273,21 +277,28 @@ def evaluate(coma , test_loader, dataset, template_mesh, device, visualize , out
         loss = loss_function(out,data.y,mu, logvar)
         total_loss += data.num_graphs * loss.item()
 
-        if visualize and i % 100 == 0:
-            meshviewer = MeshViewer(shape=(1, 2))
+        if eval_flag and i % 100 == 0:
+            # meshviewer = MeshViewer(shape=(1, 2))
 
             save_out = out.detach().cpu().numpy()
             save_out = save_out*dataset.std.numpy()+dataset.mean.numpy()
             expected_out = (data.y.detach().cpu().numpy())*dataset.std.numpy()+dataset.mean.numpy()
             result_mesh = Mesh(v=save_out, f=template_mesh.f)
             expected_mesh = Mesh(v=expected_out, f=template_mesh.f)
-            meshviewer[0][0].set_dynamic_meshes([result_mesh])
-            meshviewer[0][1].set_dynamic_meshes([expected_mesh])
-            meshviewer[0][0].save_snapshot(os.path.join(output_dir, 'file'+str(i)+'.png'), blocking=True)
 
-            result_mesh.write_ply('{}/result_{}.ply'.format(output_dir,i))
-            expected_mesh.write_ply('{}/expected_{}.ply'.format(output_dir,i))
-            print('result mesh and expected mesh are saved as .ply')
+            # meshviewer[0][0].set_dynamic_meshes([result_mesh])
+            # meshviewer[0][1].set_dynamic_meshes([expected_mesh])
+            # meshviewer[0][0].save_snapshot(os.path.join(output_dir, 'file'+str(i)+'.png'), blocking=True)
+
+            save_mesh = 'obj'
+            if save_mesh == 'ply':
+                result_mesh.write_ply('{}/result_{}.ply'.format(output_dir,i))
+                expected_mesh.write_ply('{}/expected_{}.ply'.format(output_dir,i))
+                print('result mesh and expected mesh are saved as .ply')
+            else:
+                result_mesh.write_obj('{}/result_{}.obj'.format(output_dir,i))
+                expected_mesh.write_obj('{}/expected_{}.obj'.format(output_dir,i))
+                print('result mesh and expected mesh are saved as .obj')
             
 
     return total_loss/len(dataset)

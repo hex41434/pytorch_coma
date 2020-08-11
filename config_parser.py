@@ -11,7 +11,7 @@ def set_default_parameters(config):
     config.set('Input Output', 'template_fname', './template/template.obj')
 
     config.add_section('Model Parameters')
-    config.set('Model Parameters', 'eval', 'True')
+    config.set('Model Parameters', 'eval', 'False')
     # config.set('Model Parameters', 'checkpoint_file', '../chkpt_Jul03/checkpoint_247.pt')
     config.set('Model Parameters', 'checkpoint_file', 'xx.pt')
     config.set('Model Parameters', 'z', '16')
