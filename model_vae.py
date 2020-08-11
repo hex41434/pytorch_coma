@@ -33,26 +33,33 @@ class ComaVAE(torch.nn.Module):
         batch_size = data.num_graphs
         x = x.reshape(batch_size, -1, self.filters[0])
         mu,logvar = self.encoder(x)
+        #print([mu,logvar])
         z = self.reparameterize(mu, logvar)
+        #print(torch.mean(z))
         x = self.decoder(z)
         x = x.reshape(-1, self.filters[0])
         return x,mu,logvar
 
     def encoder(self, x):
         for i in range(self.n_layers):
-            x = F.relu(self.cheb[i](x, self.A_edge_index[i], self.A_norm[i]))
+            # x = F.relu(self.cheb[i](x, self.A_edge_index[i], self.A_norm[i]))
+            x = F.sigmoid(self.cheb[i](x, self.A_edge_index[i], self.A_norm[i]))
             x = self.pool(x, self.downsample_matrices[i])
         x = x.reshape(x.shape[0], self.enc_lin1.in_features)
-        x1 = F.relu(self.enc_lin1(x))
-        x2 = F.relu(self.enc_lin2(x))
+        # x1 = F.relu(self.enc_lin1(x))
+        # x2 = F.relu(self.enc_lin2(x))
+        x1 = F.sigmoid(self.enc_lin1(x))
+        x2 = F.sigmoid(self.enc_lin2(x))
         return x1,x2
 
     def decoder(self, x):
-        x = F.relu(self.dec_lin(x))
+        #x = F.relu(self.dec_lin(x))
+        x = F.sigmoid(self.dec_lin(x))
         x = x.reshape(x.shape[0], -1, self.filters[-1])
         for i in range(self.n_layers):
             x = self.pool(x, self.upsample_matrices[-i-1])
-            x = F.relu(self.cheb_dec[i](x, self.A_edge_index[self.n_layers-i-1], self.A_norm[self.n_layers-i-1]))
+            # x = F.sigmoid(self.cheb_dec[i](x, self.A_edge_index[self.n_layers-i-1], self.A_norm[self.n_layers-i-1]))
+            x = F.sigmoid(self.cheb_dec[i](x, self.A_edge_index[self.n_layers-i-1], self.A_norm[self.n_layers-i-1]))
         x = self.cheb_dec[-1](x, self.A_edge_index[-1], self.A_norm[-1])
         return x
 

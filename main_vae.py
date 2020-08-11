@@ -52,12 +52,14 @@ def main(args):
     if not eval_flag: #train mode : fresh or reload
         current_log_dir = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         current_log_dir = os.path.join('../Experiments/',current_log_dir)    
-    else:#eval mode : save result plys     
-        if args.load_checkpoint_dir:
-            current_log_dir = '../Eval'
-        else:
+    else: #eval mode : save result plys     
+        if not args.load_checkpoint_dir:
             print(colored('*****please provide checkpoint file path to reload!*****','red'))
-            return
+            return #exit if not provided
+        else:
+            # current_log_dir = '../Eval'
+            current_log_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,'_Eval')
+            #this folder (_Eval) contains unnecessary informatio and could be removed... 
     
     print(colored('logs will be saved in:{}'.format(current_log_dir),'yellow'))
 
@@ -65,7 +67,6 @@ def main(args):
         load_checkpoint_dir = os.path.join('../Experiments/',args.load_checkpoint_dir,'chkpt')#load last checkpoint 
         print(colored('load_checkpoint_dir: {}'.format(load_checkpoint_dir), 'red'))
 
-    
     save_checkpoint_dir = os.path.join(current_log_dir , 'chkpt')
     print(colored('save_checkpoint_dir: {}\n'.format(save_checkpoint_dir), 'yellow'))
     if not os.path.exists(save_checkpoint_dir):
@@ -230,6 +231,7 @@ def loss_function(out,batch_y, mu,logvar):
     l1 = F.l1_loss(out,batch_y)
     # kl = (-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()))
     kl = (-0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp()))
+    # l = 0.9*l1+100*kl
     l = l1+kl
     return l 
 
@@ -252,6 +254,7 @@ def train(coma, train_loader, len_dataset, optimizer, device):
         optimizer.zero_grad()
         out,mu,logvar = coma(btch)
         loss = loss_function(out,btch.y,mu,logvar)
+        #print(f'loss: {loss}')
         # print(colored("\n\nnum_graphs is {} \n\n".format(btch.num_graphs),'blue'))
         total_loss += btch.num_graphs * loss.item()
         loss.backward()
