@@ -15,6 +15,7 @@ import pytorch_model_summary as pms
 from torch.utils.tensorboard import SummaryWriter
 from termcolor import colored
 import datetime
+import shutil
 
 def scipy_to_torch_sparse(scp_matrix):
     values = scp_matrix.data
@@ -39,6 +40,15 @@ def save_model(coma, optimizer, epoch, train_loss, val_loss, save_checkpoint_dir
     checkpoint['train_loss'] = train_loss
     checkpoint['val_loss'] = val_loss
     torch.save(checkpoint, os.path.join(save_checkpoint_dir,'checkpoint_'+ str(epoch)+'.pt'))
+
+def log_main_model_params(folder):
+    target = os.path.join(folder,'main_vae.py')
+    original = '/work/aifa/MeshAutoencoder/MySource/pytorch_coma/main_vae.py'
+    shutil.copyfile(original, target)
+    target = os.path.join(folder,'model_vae.py')
+    original = '/work/aifa/MeshAutoencoder/MySource/pytorch_coma/model_vae.py'
+    shutil.copyfile(original, target)
+    print(colored('log of main_vae.py and model_vae.py done!','green'))
 
 def main(args):
     if not os.path.exists(args.conf):
@@ -75,6 +85,8 @@ def main(args):
         for cf in config:
             f.write(str(cf) + ' : ')
             f.write(str(config[cf]) + '\n')
+
+    log_main_model_params(current_log_dir)
            
     print('Initializing parameters')
     template_file_path = config['template_fname']
@@ -244,11 +256,14 @@ def sample_latent_space(coma,epoch, device,template_mesh,current_log_dir):
     with torch.no_grad():
         sample = torch.randn(1, nz).to(device)
         meshsample = coma.decoder(sample).cpu()
+        # print(f'meshsample: {meshsample}')
         pth = os.path.join(current_log_dir,'./sample_plys')
-        if epoch % 10 == 0:
-            v = meshsample.view(381,3)
-            result_mesh = Mesh(v = v, f=template_mesh.f)            
-            result_mesh.write_ply(os.path.join(pth,f'meshsample_{epoch}.ply'))
+        
+        # if epoch % 10 == 0:
+        v = meshsample.view(381,3)
+        result_mesh = Mesh(v = v, f=template_mesh.f)            
+        # result_mesh.write_ply(os.path.join(pth,f'meshsample_{epoch}.ply'))
+        result_mesh.write_obj(os.path.join(pth,f'meshsample_{epoch}.obj'))
         
 def train(coma, train_loader, len_dataset, optimizer, device):
     coma.train()
@@ -293,12 +308,12 @@ def evaluate(coma , test_loader, dataset, template_mesh, device, visualize, outp
             save_mesh = 'obj'
             if save_mesh == 'ply':
                 result_mesh.write_ply('{}/result_{}.ply'.format(output_dir,i))
-                expected_mesh.write_ply('{}/expected_{}.ply'.format(output_dir,i))
-                print('result mesh and expected mesh are saved as .ply')
+                # expected_mesh.write_ply('{}/expected_{}.ply'.format(output_dir,i))
+                print('result meshes are saved as .ply')
             else:
                 result_mesh.write_obj('{}/result_{}.obj'.format(output_dir,i))
-                expected_mesh.write_obj('{}/expected_{}.obj'.format(output_dir,i))
-                print('result mesh and expected mesh are saved as .obj')
+                # expected_mesh.write_obj('{}/expected_{}.obj'.format(output_dir,i))
+                print('result meshes are saved as .obj')
             
 
     return total_loss/len(dataset)
