@@ -11,7 +11,6 @@ class Normalize(object):
         self.mean = torch.as_tensor(self.mean, dtype=data.x.dtype, device=data.x.device)
         self.std = torch.as_tensor(self.std, dtype=data.x.dtype, device=data.x.device)
         
-        
         print('mean : {} , \nstd :{} '.format(self.mean,self.std))
         print('data.x.dtype : {} '.format(data.x.dtype))
 

@@ -259,11 +259,11 @@ def sample_latent_space(coma,epoch, device,template_mesh,current_log_dir):
         # print(f'meshsample: {meshsample}')
         pth = os.path.join(current_log_dir,'./sample_plys')
         
-        # if epoch % 10 == 0:
-        v = meshsample.view(381,3)
-        result_mesh = Mesh(v = v, f=template_mesh.f)            
-        # result_mesh.write_ply(os.path.join(pth,f'meshsample_{epoch}.ply'))
-        result_mesh.write_obj(os.path.join(pth,f'meshsample_{epoch}.obj'))
+        if epoch % 10 == 0:
+            v = meshsample.view(381,3)
+            result_mesh = Mesh(v = v, f=template_mesh.f)            
+            # result_mesh.write_ply(os.path.join(pth,f'meshsample_{epoch}.ply'))
+            result_mesh.write_obj(os.path.join(pth,f'meshsample_{epoch}.obj'))
         
 def train(coma, train_loader, len_dataset, optimizer, device):
     coma.train()

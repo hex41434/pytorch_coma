@@ -71,11 +71,6 @@ class ComaDataset(InMemoryDataset):
 
             data = Data(x=mesh_verts, y=mesh_verts, edge_index=edge_index)
 
-            # taken from pyG (transform.NormalizedScale())
-            # data.x = data.x - data.x.mean(dim=-2, keepdim=True)
-            # scale = (1 / data.x.abs().max()) * 0.999999
-            # data.x = data.x * scale
-
             if self.split == 'sliced':
                 if idx % 100 <= 10:
                     test_data.append(data)
@@ -129,7 +124,6 @@ class ComaDataset(InMemoryDataset):
 
 def prepare_sliced_dataset(path):
     ComaDataset(path, pre_transform=NormalizedScale())
-
 
 def prepare_expression_dataset(path):
     test_exps = ['bareteeth', 'cheeks_in', 'eyebrow', 'high_smile', 'lips_back', 'lips_up', 'mouth_down',
