@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch_geometric.data import InMemoryDataset, Data
 from tqdm import tqdm
+from termcolor import colored
 
 from psbody.mesh import Mesh
 
@@ -160,3 +161,91 @@ if __name__ == '__main__':
     else:
         raise Exception("Only sliced, expression and identity split are supported")
 
+class FreecadDataset(InMemoryDataset):
+    def __init__(self, root_dir, dtype='train', nVal = 100, transform=None, pre_transform=None):
+        self.root_dir = root_dir
+        self.nVal = nVal
+        self.transform = transform
+        self.pre_tranform = pre_transform
+        
+        # Downloaded data is present in following format root_dir/*/*/*.py
+        self.data_file = glob.glob(self.root_dir + '/*/*/*.ply')
+        
+        super(FreecadDataset, self).__init__(root_dir, transform, pre_transform)
+        if dtype == 'train':
+            data_path = self.processed_paths[0]
+        elif dtype == 'val':
+            data_path = self.processed_paths[1]
+        elif dtype == 'test':
+            data_path = self.processed_paths[2]
+        else:
+            raise Exception("train, val and test are supported data types")
+
+        # print(self.data_file)
+        norm_path = self.processed_paths[3]
+        norm_dict = torch.load(norm_path)
+        self.mean, self.std = norm_dict['mean'], norm_dict['std']
+        self.data, self.slices = torch.load(data_path)
+        
+        if self.transform:
+            self.data = [self.transform(td) for td in self.data]
+
+    @property
+    def raw_file_names(self):
+        return self.data_file
+
+    @property
+    def processed_file_names(self):
+        processed_files = ['training.pt', 'val.pt', 'test.pt', 'norm.pt']
+        processed_files = ['_'+pf for pf in processed_files]
+        return processed_files
+
+    def process(self,transform=None):
+        train_data, val_data, test_data = [], [], []
+        train_vertices = []
+        for idx, data_file in tqdm(enumerate(self.data_file)):
+            mesh = Mesh(filename=data_file)
+            mesh_verts = torch.Tensor(mesh.v)            
+            adjacency = get_vert_connectivity(mesh.v, mesh.f).tocoo()
+            edge_index = torch.Tensor(np.vstack((adjacency.row, adjacency.col))).type(torch.LongTensor)
+
+            print(colored(mesh_verts,'red'))
+
+            # taken from pyG (transform.NormalizedScale())
+            mesh_verts = mesh_verts - mesh_verts.mean(dim=-2, keepdim=True)
+            scale = (1 / mesh_verts.abs().max()) * 0.999999
+            mesh_verts = mesh_verts * scale
+            print(colored(mesh_verts,'blue'))
+            data = Data(x=mesh_verts, y=mesh_verts, edge_index=edge_index)
+
+            if idx % 100 <= 10:
+                test_data.append(data)
+            elif idx % 100 <= 20:
+                val_data.append(data)
+            else:
+                train_data.append(data)
+                train_vertices.append(mesh.v)
+
+        mean_train = torch.Tensor(np.mean(train_vertices, axis=0))
+        std_train = torch.Tensor(np.std(train_vertices, axis=0))
+        norm_dict = {'mean': mean_train, 'std': std_train}
+        
+        if self.pre_transform is not None:
+            print(self.pre_transform)
+            if hasattr(self.pre_transform, 'mean') and hasattr(self.pre_transform, 'std'):
+                if self.pre_tranform.mean is None:
+                    self.pre_tranform.mean = mean_train
+                if self.pre_transform.std is None:
+                    self.pre_tranform.std = std_train
+            train_data = [self.pre_transform(td) for td in train_data]
+            val_data = [self.pre_transform(td) for td in val_data]
+            test_data = [self.pre_transform(td) for td in test_data]
+            
+            print('train_data[0].x : {}'.format(train_data[0].x))
+            print('\n\n')
+            print('train_data[1].x : {}'.format(train_data[1].x))
+
+        torch.save(self.collate(train_data), self.processed_paths[0])
+        torch.save(self.collate(val_data), self.processed_paths[1])
+        torch.save(self.collate(test_data), self.processed_paths[2])
+        torch.save(norm_dict, self.processed_paths[3])

@@ -4,7 +4,7 @@ import configparser
 def set_default_parameters(config):
     config.add_section('Input Output')
     config.set('Input Output', 'visualize', 'False')
-    config.set('Input Output', 'data_dir', '../rawData_main')
+    config.set('Input Output', 'data_dir', '../rawData_main/raw')
     # config.set('Input Output', 'data_dir', '../rawData')
     config.set('Input Output', 'load_checkpoint_dir', 'xx')# load last checkpoint from this directory
     config.set('Input Output', 'visual_output_dir', 'xx')
@@ -29,7 +29,7 @@ def set_default_parameters(config):
 
     config.add_section('Learning Parameters')
     config.set('Learning Parameters', 'batch_size', 16)
-    config.set('Learning Parameters', 'learning_rate', 5e-2)
+    config.set('Learning Parameters', 'learning_rate', 5e-6)
     config.set('Learning Parameters', 'learning_rate_decay', 0.99)
     config.set('Learning Parameters', 'weight_decay', 5e-4)
     config.set('Learning Parameters', 'epoch', 600)

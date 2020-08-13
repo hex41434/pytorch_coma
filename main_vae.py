@@ -5,7 +5,8 @@ import mesh_operations
 import torch
 import torch.nn.functional as F
 from config_parser import read_config
-from data import ComaDataset
+# from data import ComaDataset
+from data import FreecadDataset 
 from model_vae import ComaVAE
 from psbody.mesh import Mesh, MeshViewer
 from torch_geometric.data import DataLoader
@@ -126,8 +127,11 @@ def main(args):
 
     print('*** data loaded from {} ***'.format(data_dir))
 
-    dataset = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term)
-    dataset_test = ComaDataset(data_dir, dtype='test', split=args.split, split_term=args.split_term)
+    # dataset = ComaDataset(data_dir, dtype='train', split=args.split, split_term=args.split_term)
+    # dataset_test = ComaDataset(data_dir, dtype='test', split=args.split, split_term=args.split_term)
+    dataset = FreecadDataset(data_dir, dtype='train', pre_transform = None)#Normalize())
+    dataset_test = FreecadDataset(data_dir, dtype='test', pre_transform = None)#Normalize())
+    
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers_thread)
     test_loader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=workers_thread)
 
